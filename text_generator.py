@@ -4,7 +4,10 @@ from google import genai
 # -------------------------------
 # Configure Gemini Client
 # -------------------------------
-client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+import os
+client = genai.Client(
+    api_key=os.getenv("GOOGLE_API_KEY")
+)
 
 def generate_linkedin_post(topic, tone="professional"):
     prompt = f"""
