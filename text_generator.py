@@ -1,11 +1,11 @@
-import os
+import streamlit as st
 import google.generativeai as genai
-from dotenv import load_dotenv
 
-# Load API key from .env file
-load_dotenv()
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# -------------------------------
+# Configure Gemini API using Streamlit secrets
+# -------------------------------
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+genai.configure(api_key=GEMINI_API_KEY)
 
 def generate_linkedin_post(topic, tone="professional"):
     """
