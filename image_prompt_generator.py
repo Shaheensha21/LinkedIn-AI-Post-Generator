@@ -26,7 +26,7 @@ Rules:
 
     try:
         response = client.models.generate_content(
-            model="models/gemini-1.5-image",
+            model="models/gemini-2.5-flash",
             contents=prompt
         )
 
