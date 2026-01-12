@@ -4,26 +4,24 @@ streamlit==1.43.0
 # Pillow for image generation and handling
 Pillow==11.1.0
 
-# Requests for any API calls (optional, safe to include)
+# Requests for any API calls (optional)
 requests==2.32.5
 
 # OpenAI API for text/image generation (if using OpenAI)
 openai==1.30.0
 
-# Optional: if using Streamlit Lottie animations for the robots
+# Optional: Streamlit Lottie animations
 streamlit-lottie==0.0.5
 
-# Optional AI libraries if your text/image generation relies on them
+# AI libraries
 torch==2.9.1
 transformers==4.57.3
 diffusers==0.36.0
 langchain==1.2.1
+huggingface-hub>=0.14.1,<1.0
 
-# Google Generative AI (Gemini) for text generation
-google-generativeai==0.6.15
+# Google Generative AI (Gemini)
+google-generativeai>=0.8.0,<0.9
 
-# Hugging Face Hub client for image generation
-huggingface-hub==0.16.4
-
-# dotenv if still using .env locally
+# dotenv for local development if needed
 python-dotenv==1.0.1
