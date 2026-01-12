@@ -1,28 +1,17 @@
-# Streamlit for the web app
+# Core web app
 streamlit==1.43.0
 
-# Pillow for image generation and handling
+# Image handling
 Pillow==11.1.0
 
-# Requests for any API calls (optional)
+# HTTP requests
 requests==2.32.5
 
-# OpenAI API for text/image generation (if using OpenAI)
-openai==1.30.0
-
-# Optional: Streamlit Lottie animations
+# Animations (optional but safe)
 streamlit-lottie==0.0.5
 
-# AI libraries
-torch==2.9.1
-transformers==4.57.3
-diffusers==0.36.0
-langchain==1.2.1
-huggingface-hub>=0.14.1,<1.0
+# Google Gemini (LATEST & STABLE)
+google-genai>=1.0.0
 
-# Google Generative AI (Gemini)
-google-genai==0.8.6
-
-# dotenv for local development if needed
+# Local development support
 python-dotenv==1.0.1
-
