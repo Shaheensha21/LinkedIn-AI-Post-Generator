@@ -1,10 +1,9 @@
-import streamlit as st
 from google import genai
+import os
 
 # -------------------------------
 # Configure Gemini Client
 # -------------------------------
-import os
 client = genai.Client(
     api_key=os.getenv("GOOGLE_API_KEY")
 )
@@ -29,9 +28,13 @@ Rules:
 Return ONLY the post text.
 """
 
-    response = client.models.generate_content(
-        model="models/gemini-1.5-flash",
-        contents=prompt
-    )
+    try:
+        response = client.models.generate_content(
+            model="models/gemini-1.5-flash-latest",
+            contents=prompt
+        )
 
-    return response.text.strip()
+        return response.text.strip()
+
+    except Exception as e:
+        return "⚠️ Failed to generate post. Please try again."
