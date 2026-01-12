@@ -1,30 +1,36 @@
-import streamlit as st
 from google import genai
+import os
 
-client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+# -------------------------------
+# Configure Gemini Client
+# -------------------------------
+client = genai.Client(
+    api_key=os.getenv("GOOGLE_API_KEY")  # Use environment variable instead of st.secrets
+)
 
 def generate_image_prompt(linkedin_post: str):
     prompt = f"""
-You are an expert LinkedIn visual designer.
+You are a creative AI prompt generator.
 
-Convert the LinkedIn post below into ONE professional image prompt.
+Based on the following LinkedIn post, generate a visually appealing image prompt that can be used with AI image generation models:
 
-Post:
-\"\"\"
-{linkedin_post}
-\"\"\"
+LinkedIn post:
+"{linkedin_post}"
 
 Rules:
-- Clean, modern, corporate
-- No text inside image
-- LinkedIn business style
-- High-quality visual
-- Output ONLY the prompt
+- Keep the description clear and concise
+- Include key elements and context from the post
+- Specify art style, composition, lighting, and color palette
+- Output text should be ready for AI image generation models
 """
 
-    response = client.models.generate_content(
-        model="models/gemini-1.5-flash",
-        contents=prompt
-    )
+    try:
+        response = client.models.generate_content(
+            model="models/gemini-1.5-image",
+            contents=prompt
+        )
 
-    return response.text.strip()
+        return response.text.strip()
+
+    except Exception as e:
+        return "⚠️ Failed to generate image prompt. Please try again."
