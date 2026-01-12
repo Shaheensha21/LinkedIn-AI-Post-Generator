@@ -4,4 +4,5 @@ requests==2.32.5
 huggingface-hub>=0.20.0
 
 # Gemini SDK (CORRECT)
-google-genai>=1.50.0,<2.0.0
+google-genai>=1.50.0
+
