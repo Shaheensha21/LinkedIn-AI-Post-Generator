@@ -21,7 +21,8 @@ langchain==1.2.1
 huggingface-hub>=0.14.1,<1.0
 
 # Google Generative AI (Gemini)
-google-generativeai>=0.8.0,<0.9
+google-genai==0.8.6
 
 # dotenv for local development if needed
 python-dotenv==1.0.1
+
