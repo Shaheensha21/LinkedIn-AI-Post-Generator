@@ -1,17 +1,7 @@
-# Core web app
 streamlit==1.43.0
-
-# Image handling
 Pillow==11.1.0
-
-# HTTP requests
 requests==2.32.5
+huggingface-hub>=0.20.0
 
-# Animations (optional but safe)
-streamlit-lottie==0.0.5
-
-# Google Gemini (LATEST & STABLE)
-google-genai>=1.0.0
-
-# Local development support
-python-dotenv==1.0.1
+# Gemini (NEW SDK)
+google-genai==0.8.6
