@@ -30,7 +30,7 @@ Return ONLY the post text.
 
     try:
         response = client.models.generate_content(
-            model="models/gemini-1.5-flash-latest",
+            model="models/gemini-2.5-flash",
             contents=prompt
         )
 
