@@ -5,18 +5,25 @@ client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 def generate_image_prompt(linkedin_post: str):
     prompt = f"""
-Create a professional LinkedIn-style image prompt based on this post:
+You are an expert LinkedIn visual designer.
 
+Convert the LinkedIn post below into ONE professional image prompt.
+
+Post:
+\"\"\"
 {linkedin_post}
+\"\"\"
 
-Requirements:
-- Corporate, modern
-- Clean background
-- No text in image
+Rules:
+- Clean, modern, corporate
+- No text inside image
+- LinkedIn business style
+- High-quality visual
+- Output ONLY the prompt
 """
 
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="models/gemini-1.5-flash",
         contents=prompt
     )
 
