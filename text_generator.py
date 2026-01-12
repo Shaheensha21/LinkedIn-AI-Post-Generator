@@ -1,38 +1,25 @@
 import streamlit as st
 from google import genai
 
-# ----------------------------------
-# Initialize Gemini client (SAFE)
-# ----------------------------------
-def get_gemini_client():
-    if "GEMINI_API_KEY" not in st.secrets:
-        raise RuntimeError("GEMINI_API_KEY not found in Streamlit secrets")
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
-    return genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-
-
-def generate_linkedin_post(topic: str, tone: str = "professional") -> str:
-    """
-    Generate a LinkedIn post using Gemini
-    """
-
-    client = get_gemini_client()
-
+def generate_linkedin_post(topic, tone="professional"):
     prompt = f"""
-You are a LinkedIn content expert.
+You are a top LinkedIn content creator.
 
-Write a {tone} LinkedIn post about the following topic:
+Write a {tone} LinkedIn post about:
 "{topic}"
 
 Requirements:
-- Professional and engaging tone
+- Strong hook
 - Short paragraphs
-- 3–5 relevant hashtags at the end
-- Include a clear call-to-action
+- Clear value
+- Call-to-action
+- 3–5 hashtags
 """
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-1.5-flash",
         contents=prompt
     )
 
