@@ -1,13 +1,22 @@
-import os
+import streamlit as st
 import google.generativeai as genai
-from dotenv import load_dotenv
 
-load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# ------------------- Configure Gemini API -------------------
+# Use Streamlit Secrets for secure API keys
+# Add in your Streamlit Cloud: GEMINI_API_KEY
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-def generate_image_prompt(linkedin_post: str):
+# ------------------- Image Prompt Generator -------------------
+def generate_image_prompt(linkedin_post: str) -> str:
     """
     Converts a LinkedIn post into a professional image-generation prompt
+    suitable for AI image generators.
+
+    Args:
+        linkedin_post (str): The LinkedIn post text.
+
+    Returns:
+        str: A detailed image prompt text.
     """
     prompt = f"""
 You are an expert visual designer for LinkedIn content.
@@ -30,6 +39,7 @@ Image prompt requirements:
 
 Output ONLY the image prompt text.
 """
+    # Use Gemini 2.5 Flash model
     model = genai.GenerativeModel("models/gemini-2.5-flash")
     response = model.generate_content(prompt)
     return response.text.strip()
