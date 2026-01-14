@@ -9,7 +9,6 @@ import requests
 import secrets
 import urllib.parse
 import json
-import base64
 
 # ------------------- Streamlit Page Config -------------------
 st.set_page_config(
@@ -22,7 +21,7 @@ st.set_page_config(
 # ------------------- LinkedIn OAuth Config -------------------
 LINKEDIN_CLIENT_ID = st.secrets["LINKEDIN_CLIENT_ID"]
 LINKEDIN_CLIENT_SECRET = st.secrets["LINKEDIN_CLIENT_SECRET"]
-LINKEDIN_REDIRECT_URI = st.secrets["LINKEDIN_REDIRECT_URI"]  # Must match exactly your LinkedIn Authorized Redirect URL
+LINKEDIN_REDIRECT_URI = st.secrets["LINKEDIN_REDIRECT_URI"]  # Must exactly match LinkedIn Authorized Redirect URL
 
 AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
 TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
@@ -35,17 +34,19 @@ if "generated" not in st.session_state:
     st.session_state.generated = False
 if "linkedin_token" not in st.session_state:
     st.session_state.linkedin_token = None
+# --- Persistent OAuth state to fix security check ---
 if "oauth_state" not in st.session_state:
     st.session_state.oauth_state = secrets.token_urlsafe(16)
 
 # ------------------- OAuth Helpers -------------------
 def get_linkedin_auth_url():
+    state = st.session_state.oauth_state
     params = {
         "response_type": "code",
         "client_id": LINKEDIN_CLIENT_ID,
         "redirect_uri": LINKEDIN_REDIRECT_URI,
         "scope": SCOPE,
-        "state": st.session_state.oauth_state,
+        "state": state,
     }
     return f"{AUTH_URL}?{urllib.parse.urlencode(params)}"
 
@@ -62,9 +63,15 @@ def exchange_code_for_token(code):
     response.raise_for_status()
     return response.json()["access_token"]
 
+def get_linkedin_urn(access_token):
+    headers = {"Authorization": f"Bearer {access_token}"}
+    res = requests.get("https://api.linkedin.com/v2/me", headers=headers)
+    res.raise_for_status()
+    return res.json()["id"]
+
 def upload_image_to_linkedin(image_path, access_token):
     headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
-    
+
     # Step 1: Register upload
     register_payload = {
         "registerUploadRequest": {
@@ -88,12 +95,6 @@ def upload_image_to_linkedin(image_path, access_token):
     res2.raise_for_status()
 
     return asset_urn
-
-def get_linkedin_urn(access_token):
-    headers = {"Authorization": f"Bearer {access_token}"}
-    res = requests.get("https://api.linkedin.com/v2/me", headers=headers)
-    res.raise_for_status()
-    return res.json()["id"]
 
 def post_to_linkedin(content, image_path, access_token):
     author_urn = f"urn:li:person:{get_linkedin_urn(access_token)}"
