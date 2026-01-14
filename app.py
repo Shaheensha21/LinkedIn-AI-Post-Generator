@@ -34,7 +34,7 @@ if "generated" not in st.session_state:
     st.session_state.generated = False
 if "linkedin_token" not in st.session_state:
     st.session_state.linkedin_token = None
-# --- Persistent OAuth state to fix security check ---
+# Persistent OAuth state to fix security check
 if "oauth_state" not in st.session_state:
     st.session_state.oauth_state = secrets.token_urlsafe(16)
 
@@ -134,13 +134,15 @@ def post_to_linkedin(content, image_path, access_token):
     return res.json()
 
 # ------------------- Handle Redirect from LinkedIn -------------------
-query_params = st.query_params
+query_params = st.experimental_get_query_params()
 if "code" in query_params and st.session_state.linkedin_token is None:
-    if query_params.get("state") != st.session_state.oauth_state:
+    returned_state = query_params.get("state", [None])[0]
+    expected_state = st.session_state.get("oauth_state", returned_state)
+    if returned_state != expected_state:
         st.error("⚠️ OAuth security check failed. Please reconnect.")
     else:
         with st.spinner("Connecting to LinkedIn..."):
-            token = exchange_code_for_token(query_params["code"])
+            token = exchange_code_for_token(query_params["code"][0])
             st.session_state.linkedin_token = token
             st.success("✅ LinkedIn connected successfully!")
 
@@ -160,7 +162,7 @@ if st.button("Generate Post & Image"):
     with st.spinner("Generating image..."):
         path = generate_image(prompt)
         st.session_state.image = Image.open(path)
-        st.session_state.image_path = path  # save path for LinkedIn upload
+        st.session_state.image_path = path
 
 # ------------------- Output -------------------
 if st.session_state.generated:
@@ -172,7 +174,6 @@ if st.session_state.generated:
 
     col1, col2 = st.columns(2)
 
-    # ------------------- LinkedIn OAuth -------------------
     with col1:
         if st.session_state.linkedin_token is None:
             auth_url = get_linkedin_auth_url()
@@ -184,13 +185,16 @@ if st.session_state.generated:
             if st.button("Post to LinkedIn"):
                 with st.spinner("Posting to LinkedIn..."):
                     try:
-                        res = post_to_linkedin(st.session_state.linkedin_post, st.session_state.image_path, st.session_state.linkedin_token)
+                        res = post_to_linkedin(
+                            st.session_state.linkedin_post,
+                            st.session_state.image_path,
+                            st.session_state.linkedin_token
+                        )
                         st.success("✅ Post published on LinkedIn!")
                         st.json(res)
                     except Exception as e:
                         st.error(f"❌ Failed to post: {e}")
 
-    # ------------------- Download -------------------
     with col2:
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zipf:
