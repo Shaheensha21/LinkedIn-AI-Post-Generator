@@ -34,7 +34,6 @@ if "generated" not in st.session_state:
     st.session_state.generated = False
 if "linkedin_token" not in st.session_state:
     st.session_state.linkedin_token = None
-# Persistent OAuth state to fix security check
 if "oauth_state" not in st.session_state:
     st.session_state.oauth_state = secrets.token_urlsafe(16)
 
@@ -134,7 +133,7 @@ def post_to_linkedin(content, image_path, access_token):
     return res.json()
 
 # ------------------- Handle Redirect from LinkedIn -------------------
-query_params = st.experimental_get_query_params()
+query_params = st.query_params  # ✅ Updated correct method
 if "code" in query_params and st.session_state.linkedin_token is None:
     returned_state = query_params.get("state", [None])[0]
     expected_state = st.session_state.get("oauth_state", returned_state)
