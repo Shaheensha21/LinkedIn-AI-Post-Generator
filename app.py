@@ -21,7 +21,7 @@ st.set_page_config(
 # ------------------- LinkedIn OAuth Config -------------------
 LINKEDIN_CLIENT_ID = st.secrets["LINKEDIN_CLIENT_ID"]
 LINKEDIN_CLIENT_SECRET = st.secrets["LINKEDIN_CLIENT_SECRET"]
-LINKEDIN_REDIRECT_URI = st.secrets["LINKEDIN_REDIRECT_URI"]  # Must exactly match LinkedIn Authorized Redirect URL
+LINKEDIN_REDIRECT_URI = st.secrets["LINKEDIN_REDIRECT_URI"]  # Must match exactly your Streamlit URL
 
 AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
 TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
@@ -133,7 +133,7 @@ def post_to_linkedin(content, image_path, access_token):
     return res.json()
 
 # ------------------- Handle Redirect from LinkedIn -------------------
-query_params = st.query_params  # ✅ Updated correct method
+query_params = st.query_params
 if "code" in query_params and st.session_state.linkedin_token is None:
     returned_state = query_params.get("state", [None])[0]
     expected_state = st.session_state.get("oauth_state", returned_state)
@@ -169,7 +169,10 @@ if st.session_state.generated:
     st.markdown(st.session_state.linkedin_post)
 
     st.subheader("🔹 Generated Image")
-    st.image(st.session_state.image, width=500)
+    if "image" in st.session_state:
+        st.image(st.session_state.image, width=500)
+    else:
+        st.info("Image not generated yet. Click 'Generate Post & Image' first.")
 
     col1, col2 = st.columns(2)
 
@@ -198,7 +201,8 @@ if st.session_state.generated:
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zipf:
             zipf.writestr("linkedin_post.txt", st.session_state.linkedin_post)
-            img_bytes = io.BytesIO()
-            st.session_state.image.save(img_bytes, format="WEBP")
-            zipf.writestr("linkedin_image.webp", img_bytes.getvalue())
+            if "image" in st.session_state:
+                img_bytes = io.BytesIO()
+                st.session_state.image.save(img_bytes, format="WEBP")
+                zipf.writestr("linkedin_image.webp", img_bytes.getvalue())
         st.download_button("⬇️ Download Post & Image", zip_buffer.getvalue(), "linkedin_content.zip", "application/zip")
