@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- Imports (your existing files) ----------------
+# ---------------- Your existing modules ----------------
 from text_generator import generate_linkedin_post
 from image_prompt_generator import generate_image_prompt
 from image_generator import generate_image
@@ -21,6 +21,7 @@ defaults = {
     "generated": False,
     "linkedin_post": "",
     "image": None,
+    "image_path": None,
 }
 
 for k, v in defaults.items():
@@ -30,10 +31,14 @@ for k, v in defaults.items():
 # ---------------- UI ----------------
 st.title("🤖 AI-Powered LinkedIn Content Generator")
 st.markdown(
-    "Generate **professional LinkedIn posts and images** using AI.\n\n"
-    "✅ No OAuth\n"
-    "✅ No API restrictions\n"
-    "✅ LinkedIn-compliant sharing"
+    """
+Create professional LinkedIn posts and visuals using AI.
+
+**Important Notice**
+- LinkedIn restricts direct posting from third-party apps.
+- This app prepares content and opens LinkedIn for manual posting.
+- Final posting must be completed on LinkedIn by the user.
+"""
 )
 
 topic = st.text_input(
@@ -55,10 +60,11 @@ if st.button("🚀 Generate Post & Image"):
             img_prompt = generate_image_prompt(st.session_state.linkedin_post)
 
         with st.spinner("Generating image..."):
-            img_bytes = generate_image(img_prompt)
-            st.session_state.image = Image.open(io.BytesIO(img_bytes))
+            path = generate_image(img_prompt)   # ✅ returns file path
+            st.session_state.image_path = path
+            st.session_state.image = Image.open(path)
 
-        st.success("✅ Content generated successfully!")
+        st.success("Content generated successfully!")
 
 # ---------------- Output ----------------
 if st.session_state.generated:
@@ -67,7 +73,7 @@ if st.session_state.generated:
     st.markdown(st.session_state.linkedin_post)
 
     st.subheader("🖼️ Generated Image")
-    if st.session_state.image:
+    if st.session_state.image is not None:
         st.image(st.session_state.image, width=500)
 
     col1, col2 = st.columns(2)
@@ -102,12 +108,10 @@ if st.session_state.generated:
         )
 
         st.info(
-            "Steps:\n"
-            "1️⃣ LinkedIn opens in new tab\n"
-            "2️⃣ Login if required\n"
-            "3️⃣ Post text is pre-filled\n"
-            "4️⃣ Upload the generated image\n"
-            "5️⃣ Click Post"
+            "How it works:\n"
+            "1️⃣ LinkedIn opens in a new tab\n"
+            "2️⃣ Paste/edit content if needed\n"
+            "3️⃣ Upload image & click Post"
         )
 
     # -------- Download Section --------
@@ -121,7 +125,7 @@ if st.session_state.generated:
                 st.session_state.linkedin_post
             )
 
-            if st.session_state.image:
+            if st.session_state.image is not None:
                 img_bytes = io.BytesIO()
                 st.session_state.image.save(img_bytes, format="PNG")
                 zipf.writestr(
