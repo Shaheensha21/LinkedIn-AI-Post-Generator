@@ -42,7 +42,8 @@ AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
 TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 POST_URL = "https://api.linkedin.com/v2/ugcPosts"
 UPLOAD_URL = "https://api.linkedin.com/v2/assets?action=registerUpload"
-SCOPE = "openid profile email w_member_social"
+SCOPE = "r_liteprofile r_emailaddress w_member_social"
+
 
 
 # ------------------- OAUTH HELPERS -------------------
