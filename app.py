@@ -138,7 +138,8 @@ login_url = (
 )
 st.markdown(f"[Login with LinkedIn]({login_url})")
 
-params = st.experimental_get_query_params()
+# ✅ Updated: use st.query_params instead of deprecated experimental_get_query_params
+params = st.query_params
 if "code" in params and not st.session_state.linkedin_logged_in:
     token = get_access_token(params["code"][0])
     if token:
