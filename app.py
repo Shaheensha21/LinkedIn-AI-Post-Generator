@@ -51,7 +51,7 @@ if "linkedin_token" not in st.session_state:
 # ------------------------------------------
 def generate_text(topic: str) -> str:
     llm = ChatGoogleGenerativeAI(
-        model="models/gemini-1.5-flash",
+        model="models/gemini-2.5-flash",
         api_key=GOOGLE_API_KEY,
         temperature=0.7,
     )
