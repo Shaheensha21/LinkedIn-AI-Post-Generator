@@ -1,5 +1,5 @@
 # ==========================================
-# app.py – AI LinkedIn Auto Poster (Working OAuth)
+# app.py – AI LinkedIn Auto Poster (Fixed OAuth)
 # ==========================================
 
 import time
@@ -115,10 +115,7 @@ def get_user_urn(token):
 # LINKEDIN POST HELPERS
 # -------------------------------
 def upload_image_to_linkedin(token, image_path, owner_urn):
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     register_payload = {
         "registerUploadRequest": {
             "owner": owner_urn,
@@ -129,11 +126,8 @@ def upload_image_to_linkedin(token, image_path, owner_urn):
             }]
         }
     }
-    r = requests.post(
-        "https://api.linkedin.com/v2/assets?action=registerUpload",
-        headers=headers,
-        json=register_payload
-    )
+    r = requests.post("https://api.linkedin.com/v2/assets?action=registerUpload",
+                      headers=headers, json=register_payload)
     upload_url = r.json()["value"]["uploadMechanism"][
         "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
     ]["uploadUrl"]
@@ -145,10 +139,7 @@ def upload_image_to_linkedin(token, image_path, owner_urn):
     return asset
 
 def create_linkedin_post(token, owner_urn, text, asset):
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     payload = {
         "author": owner_urn,
         "lifecycleState": "PUBLISHED",
@@ -156,21 +147,12 @@ def create_linkedin_post(token, owner_urn, text, asset):
             "com.linkedin.ugc.ShareContent": {
                 "shareCommentary": {"text": text},
                 "shareMediaCategory": "IMAGE",
-                "media": [{
-                    "status": "READY",
-                    "media": asset
-                }]
+                "media": [{"status": "READY", "media": asset}]
             }
         },
-        "visibility": {
-            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-        }
+        "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
     }
-    r = requests.post(
-        "https://api.linkedin.com/v2/ugcPosts",
-        headers=headers,
-        json=payload
-    )
+    r = requests.post("https://api.linkedin.com/v2/ugcPosts", headers=headers, json=payload)
     return r.status_code
 
 # -------------------------------
@@ -218,7 +200,8 @@ if "code" in query_params and not st.session_state.linkedin_logged_in:
     if token:
         st.session_state.linkedin_token = token
         st.session_state.linkedin_logged_in = True
-        st.success("LinkedIn login successful! Now click 'Post to LinkedIn'.")
+        # Force page to rerun so the Post button becomes active
+        st.experimental_rerun()
 
 # -------------------------------
 # POST TO LINKEDIN
@@ -228,8 +211,9 @@ upload_disabled = not (
     st.session_state.linkedin_logged_in
 )
 
+st.subheader("🚀 Post to LinkedIn")
 if st.button("Post to LinkedIn", disabled=upload_disabled):
-    with st.spinner("Posting..."):
+    with st.spinner("Posting to LinkedIn..."):
         owner_urn = get_user_urn(st.session_state.linkedin_token)
         asset = upload_image_to_linkedin(
             st.session_state.linkedin_token,
