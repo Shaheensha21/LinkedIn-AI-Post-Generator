@@ -17,7 +17,6 @@ from huggingface_hub import InferenceClient
 # -------------------------------
 # LOAD ENV VARIABLES
 # -------------------------------
-load_dotenv()
 
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 HF_API_KEY = st.secrets["HF_API_KEY"]
