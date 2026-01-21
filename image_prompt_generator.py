@@ -1,28 +1,37 @@
 from google import genai
 import os
 
-# -------------------------------
-# Configure Gemini Client
-# -------------------------------
 client = genai.Client(
-    api_key=os.getenv("GOOGLE_API_KEY")  # Use environment variable instead of st.secrets
+    api_key=os.getenv("GOOGLE_API_KEY")
 )
 
-def generate_image_prompt(linkedin_post: str):
-template="""
-        Write a professional and engaging LinkedIn post (100–120 words) about:
-        "{topic}"
+def generate_flux_image_prompt(topic: str):
+    prompt = f"""
+Generate a highly realistic, photorealistic image prompt for Black Forest Labs FLUX.
 
-        Tone: professional, inspiring, positive.
-        """
+Topic:
+{topic}
+
+Prompt rules:
+- Photorealistic, real-world photography
+- Professional LinkedIn-friendly style
+- Natural lighting, realistic skin texture
+- Modern environment
+- DSLR photo, 50mm lens
+- Shallow depth of field
+- Ultra high resolution
+- Clean composition
+- No text, no watermark, no logo
+
+Return ONLY the final image prompt.
+"""
 
     try:
         response = client.models.generate_content(
             model="models/gemini-2.5-flash",
             contents=prompt
         )
-
         return response.text.strip()
 
-    except Exception as e:
-        return "⚠️ Failed to generate image prompt. Please try again."
+    except Exception:
+        return "⚠️ Failed to generate FLUX image prompt."
