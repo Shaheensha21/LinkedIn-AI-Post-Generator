@@ -1,5 +1,5 @@
 # ================================
-# app.py – AI LinkedIn Auto Poster
+# app.py – AI LinkedIn Auto Poster (FINAL FIXED)
 # ================================
 
 import time
@@ -23,16 +23,14 @@ st.title("🤖 AI LinkedIn Auto Poster")
 st.caption("Generate AI content and post it directly to LinkedIn")
 
 # -------------------------------
-# SECRETS (STREAMLIT CLOUD)
+# LOAD SECRETS (STREAMLIT CLOUD)
 # -------------------------------
 GEMINI_API_KEY = st.secrets["GOOGLE_API_KEY"]
 HF_API_KEY = st.secrets["HUGGINGFACE_API_KEY"]
 
 CLIENT_ID = st.secrets["LINKEDIN_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["LINKEDIN_CLIENT_SECRET"]
-
-# 🔴 MUST MATCH LINKEDIN DASHBOARD EXACTLY
-REDIRECT_URI = "https://linkedin-ai-post-generator-m6wsoanuahm6kvq6lvcppd.streamlit.app"
+REDIRECT_URI = st.secrets["LINKEDIN_REDIRECT_URI"]
 
 AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
 TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
@@ -43,11 +41,60 @@ TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 if "has_content" not in st.session_state:
     st.session_state.has_content = False
 
+if "generated_text" not in st.session_state:
+    st.session_state.generated_text = None
+
+if "image_path" not in st.session_state:
+    st.session_state.image_path = None
+
 if "linkedin_logged_in" not in st.session_state:
     st.session_state.linkedin_logged_in = False
 
 if "linkedin_token" not in st.session_state:
     st.session_state.linkedin_token = None
+
+# -------------------------------
+# LINKEDIN OAUTH HELPERS
+# -------------------------------
+def get_access_token(auth_code):
+    payload = {
+        "grant_type": "authorization_code",
+        "code": auth_code,
+        "redirect_uri": REDIRECT_URI,
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+    }
+
+    r = requests.post(TOKEN_URL, data=payload)
+    if r.status_code == 200:
+        return r.json()["access_token"]
+    return None
+
+
+def get_user_urn(token):
+    headers = {"Authorization": f"Bearer {token}"}
+    r = requests.get("https://api.linkedin.com/v2/userinfo", headers=headers)
+    data = r.json()
+    return f"urn:li:person:{data['sub']}"
+
+# -------------------------------
+# HANDLE OAUTH CALLBACK FIRST
+# (THIS FIXES YOUR ISSUE)
+# -------------------------------
+query_params = st.query_params
+
+if "code" in query_params and not st.session_state.linkedin_logged_in:
+    with st.spinner("Authenticating with LinkedIn..."):
+        token = get_access_token(query_params["code"])
+        if token:
+            st.session_state.linkedin_token = token
+            st.session_state.linkedin_logged_in = True
+
+            # IMPORTANT: clear params to stop rerun loop
+            st.query_params.clear()
+
+            st.success("✅ LinkedIn authorization successful!")
+            st.stop()
 
 # -------------------------------
 # TEXT GENERATION (GEMINI)
@@ -90,40 +137,6 @@ def generate_image(prompt, output_path="generated_image.png"):
             time.sleep(5)
 
     raise RuntimeError("Image generation failed")
-
-# -------------------------------
-# AI PIPELINE
-# -------------------------------
-def ai_generate_pipeline(query):
-    text = generate_text(query)
-    image_path = generate_image(
-        f"Professional illustration representing {query}"
-    )
-    return text, image_path
-
-# -------------------------------
-# LINKEDIN OAUTH HELPERS
-# -------------------------------
-def get_access_token(auth_code):
-    payload = {
-        "grant_type": "authorization_code",
-        "code": auth_code,
-        "redirect_uri": REDIRECT_URI,
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
-    }
-
-    r = requests.post(TOKEN_URL, data=payload)
-    if r.status_code == 200:
-        return r.json()["access_token"]
-    return None
-
-
-def get_user_urn(token):
-    headers = {"Authorization": f"Bearer {token}"}
-    r = requests.get("https://api.linkedin.com/v2/userinfo", headers=headers)
-    data = r.json()
-    return f"urn:li:person:{data['sub']}"
 
 # -------------------------------
 # LINKEDIN POST HELPERS
@@ -198,16 +211,16 @@ def create_linkedin_post(token, owner_urn, text, asset):
 # ===============================
 # UI: GENERATE CONTENT
 # ===============================
-query = st.text_input("Enter your topic")
+topic = st.text_input("Enter your topic")
 
 if st.button("Generate"):
-    if query.strip():
+    if topic.strip():
         with st.spinner("Generating AI content..."):
-            text, image_path = ai_generate_pipeline(query)
-
-        st.session_state.generated_text = text
-        st.session_state.image_path = image_path
-        st.session_state.has_content = True
+            st.session_state.generated_text = generate_text(topic)
+            st.session_state.image_path = generate_image(
+                f"Professional illustration representing {topic}"
+            )
+            st.session_state.has_content = True
     else:
         st.warning("Please enter a topic")
 
@@ -219,13 +232,10 @@ if st.session_state.has_content:
     st.write(st.session_state.generated_text)
 
     st.subheader("🖼️ Generated Image")
-    st.image(
-        Image.open(st.session_state.image_path),
-        use_container_width=True
-    )
+    st.image(Image.open(st.session_state.image_path), width="stretch")
 
 # ===============================
-# LINKEDIN AUTH
+# LINKEDIN AUTH UI
 # ===============================
 st.divider()
 st.subheader("🔐 LinkedIn Authorization")
@@ -238,22 +248,13 @@ login_url = (
     f"&scope=openid%20profile%20w_member_social"
 )
 
-st.markdown(f"[Login with LinkedIn]({login_url})")
-
-query_params = st.query_params
-
-if "code" in query_params and not st.session_state.linkedin_logged_in:
-    token = get_access_token(query_params["code"])
-    if token:
-        st.session_state.linkedin_token = token
-        st.session_state.linkedin_logged_in = True
-        st.success("LinkedIn authorization successful!")
-
-        # 🔥 CRITICAL FIX: STOP REFRESH LOOP
-        st.query_params.clear()
+if not st.session_state.linkedin_logged_in:
+    st.markdown(f"[Login with LinkedIn]({login_url})")
+else:
+    st.success("LinkedIn already authenticated ✅")
 
 # ===============================
-# UPLOAD TO LINKEDIN
+# POST TO LINKEDIN
 # ===============================
 upload_disabled = not (
     st.session_state.has_content and
