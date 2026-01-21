@@ -8,11 +8,11 @@ import urllib.parse
 import io
 import time
 from PIL import Image
-from dotenv import load_dotenv
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 from huggingface_hub import InferenceClient
+
 
 # -------------------------------
 # LOAD ENV VARIABLES
