@@ -24,7 +24,7 @@ st.title("🤖 AI LinkedIn Auto Poster")
 st.caption("Generate AI content and post directly to LinkedIn")
 
 # ------------------------------------------
-# LOAD SECRETS (STREAMLIT CLOUD ONLY)
+# LOAD SECRETS (STREAMLIT CLOUD)
 # ------------------------------------------
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 HF_API_KEY = st.secrets["HUGGINGFACE_API_KEY"]
@@ -37,14 +37,19 @@ AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
 TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 
 # ------------------------------------------
-# SESSION STATE INIT
+# SESSION STATE INIT (🔥 CRITICAL FIX)
 # ------------------------------------------
-if "has_content" not in st.session_state:
-    st.session_state.has_content = False
-if "linkedin_logged_in" not in st.session_state:
-    st.session_state.linkedin_logged_in = False
-if "linkedin_token" not in st.session_state:
-    st.session_state.linkedin_token = None
+defaults = {
+    "has_content": False,
+    "generated_text": "",
+    "image_path": None,
+    "linkedin_logged_in": False,
+    "linkedin_token": None,
+}
+
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 # ------------------------------------------
 # TEXT GENERATION (GEMINI)
@@ -185,11 +190,13 @@ def create_linkedin_post(token, owner_urn, text, asset):
 # ------------------------------------------
 topic = st.text_input("Enter your LinkedIn topic")
 
-if st.button("Generate"):
+if st.button("🚀 Generate"):
     if topic.strip():
         with st.spinner("Generating content..."):
             text = generate_text(topic)
-            image_path = generate_image(f"Professional illustration representing {topic}")
+            image_path = generate_image(
+                f"Professional illustration representing {topic}"
+            )
 
         st.session_state.generated_text = text
         st.session_state.image_path = image_path
@@ -204,8 +211,9 @@ if st.session_state.has_content:
     st.subheader("📝 Generated Post")
     st.write(st.session_state.generated_text)
 
-    st.subheader("🖼️ Generated Image")
-    st.image(Image.open(st.session_state.image_path), width="stretch")
+    if st.session_state.image_path:
+        st.subheader("🖼️ Generated Image")
+        st.image(Image.open(st.session_state.image_path), use_container_width=True)
 
 # ------------------------------------------
 # LINKEDIN AUTH
@@ -229,13 +237,19 @@ if "code" in query_params and not st.session_state.linkedin_logged_in:
     if token:
         st.session_state.linkedin_token = token
         st.session_state.linkedin_logged_in = True
-        st.success("LinkedIn authorization successful!")
+        st.success("✅ LinkedIn authorization successful!")
 
 # ------------------------------------------
 # POST TO LINKEDIN
 # ------------------------------------------
-if st.button("Upload to LinkedIn", disabled=not st.session_state.linkedin_logged_in):
-    with st.spinner("Posting..."):
+if st.button(
+    "📤 Upload to LinkedIn",
+    disabled=not (
+        st.session_state.linkedin_logged_in
+        and st.session_state.has_content
+    ),
+):
+    with st.spinner("Posting to LinkedIn..."):
         owner_urn = get_user_urn(st.session_state.linkedin_token)
         asset = upload_image_to_linkedin(
             st.session_state.linkedin_token,
