@@ -218,26 +218,40 @@ if st.session_state.has_content:
 # ------------------------------------------
 # LINKEDIN AUTH
 # ------------------------------------------
+# ------------------------------------------
+# LINKEDIN AUTH (FIXED FLOW)
+# ------------------------------------------
 st.divider()
 st.subheader("🔐 LinkedIn Authorization")
 
-login_url = (
-    f"{AUTH_URL}"
-    f"?response_type=code"
-    f"&client_id={CLIENT_ID}"
-    f"&redirect_uri={REDIRECT_URI}"
-    f"&scope=openid%20profile%20w_member_social"
-)
+if not st.session_state.linkedin_logged_in:
+    login_url = (
+        f"{AUTH_URL}"
+        f"?response_type=code"
+        f"&client_id={CLIENT_ID}"
+        f"&redirect_uri={REDIRECT_URI}"
+        f"&scope=openid%20profile%20w_member_social"
+    )
+    st.markdown(f"[🔑 Login with LinkedIn]({login_url})")
+else:
+    st.success("✅ LinkedIn logged in successfully")
 
-st.markdown(f"[Login with LinkedIn]({login_url})")
-
+# --- HANDLE REDIRECT ---
 query_params = st.query_params
+
 if "code" in query_params and not st.session_state.linkedin_logged_in:
-    token = get_access_token(query_params["code"])
-    if token:
-        st.session_state.linkedin_token = token
-        st.session_state.linkedin_logged_in = True
-        st.success("✅ LinkedIn authorization successful!")
+    with st.spinner("Authenticating with LinkedIn..."):
+        token = get_access_token(query_params["code"])
+
+        if token:
+            st.session_state.linkedin_token = token
+            st.session_state.linkedin_logged_in = True
+
+            # 🔥 CLEAR QUERY PARAMS (IMPORTANT)
+            st.query_params.clear()
+
+            # 🔥 FORCE RERUN SO UI UPDATES
+            st.rerun()
 
 # ------------------------------------------
 # POST TO LINKEDIN
