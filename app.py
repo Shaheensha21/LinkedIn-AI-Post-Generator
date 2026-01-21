@@ -1,11 +1,12 @@
 # ==========================================
-# app.py – AI LinkedIn Auto Poster (Fixed OAuth)
+# app.py – AI LinkedIn Auto Poster (Stable)
 # ==========================================
 
 import time
 import requests
 import streamlit as st
 from PIL import Image
+from io import BytesIO
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 from huggingface_hub import InferenceClient
@@ -20,7 +21,7 @@ st.set_page_config(
 )
 
 st.title("🤖 AI LinkedIn Auto Poster")
-st.caption("Generate AI content and post directly to LinkedIn")
+st.caption("Generate AI content and post it to LinkedIn")
 
 # -------------------------------
 # SECRETS (Streamlit Cloud)
@@ -38,19 +39,19 @@ TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 # -------------------------------
 # SESSION STATE INIT
 # -------------------------------
-if "has_content" not in st.session_state:
-    st.session_state.has_content = False
-if "linkedin_logged_in" not in st.session_state:
-    st.session_state.linkedin_logged_in = False
-if "linkedin_token" not in st.session_state:
-    st.session_state.linkedin_token = None
 if "generated_text" not in st.session_state:
     st.session_state.generated_text = ""
 if "image_path" not in st.session_state:
     st.session_state.image_path = None
+if "has_content" not in st.session_state:
+    st.session_state.has_content = False
+if "linkedin_token" not in st.session_state:
+    st.session_state.linkedin_token = None
+if "linkedin_logged_in" not in st.session_state:
+    st.session_state.linkedin_logged_in = False
 
 # -------------------------------
-# TEXT GENERATION (GEMINI)
+# TEXT GENERATION
 # -------------------------------
 def generate_text(topic: str) -> str:
     llm = ChatGoogleGenerativeAI(
@@ -67,30 +68,25 @@ def generate_text(topic: str) -> str:
         Tone: professional, inspiring, positive.
         """
     )
-    formatted_prompt = prompt.format(topic=topic)
-    response = llm.invoke(formatted_prompt)
+    response = llm.invoke(prompt.format(topic=topic))
     return response.content
 
 # -------------------------------
-# IMAGE GENERATION (HUGGING FACE)
+# IMAGE GENERATION
 # -------------------------------
 def generate_image(prompt, output_path="generated_image.png"):
-    client = InferenceClient(
-        model="black-forest-labs/FLUX.1-schnell",
-        token=HF_API_KEY
-    )
+    client = InferenceClient(model="black-forest-labs/FLUX.1-schnell", token=HF_API_KEY)
     for attempt in range(3):
         try:
             image = client.text_to_image(prompt)
             image.save(output_path)
             return output_path
         except Exception as e:
-            print(f"Image retry {attempt+1}: {e}")
-            time.sleep(5)
+            time.sleep(2)
     raise RuntimeError("Image generation failed")
 
 # -------------------------------
-# LINKEDIN OAUTH HELPERS
+# LINKEDIN HELPERS
 # -------------------------------
 def get_access_token(auth_code):
     payload = {
@@ -107,35 +103,24 @@ def get_access_token(auth_code):
 
 def get_user_urn(token):
     headers = {"Authorization": f"Bearer {token}"}
-    r = requests.get("https://api.linkedin.com/v2/userinfo", headers=headers)
+    r = requests.get("https://api.linkedin.com/v2/me", headers=headers)
     data = r.json()
-    return f"urn:li:person:{data['sub']}"
+    return f"urn:li:person:{data['id']}"
 
-# -------------------------------
-# LINKEDIN POST HELPERS
-# -------------------------------
 def upload_image_to_linkedin(token, image_path, owner_urn):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     register_payload = {
         "registerUploadRequest": {
             "owner": owner_urn,
             "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
-            "serviceRelationships": [{
-                "relationshipType": "OWNER",
-                "identifier": "urn:li:userGeneratedContent"
-            }]
+            "serviceRelationships": [{"relationshipType": "OWNER","identifier":"urn:li:userGeneratedContent"}]
         }
     }
-    r = requests.post("https://api.linkedin.com/v2/assets?action=registerUpload",
-                      headers=headers, json=register_payload)
-    upload_url = r.json()["value"]["uploadMechanism"][
-        "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
-    ]["uploadUrl"]
+    r = requests.post("https://api.linkedin.com/v2/assets?action=registerUpload", headers=headers, json=register_payload)
+    upload_url = r.json()["value"]["uploadMechanism"]["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]["uploadUrl"]
     asset = r.json()["value"]["asset"]
-
     with open(image_path, "rb") as f:
         requests.put(upload_url, data=f.read())
-
     return asset
 
 def create_linkedin_post(token, owner_urn, text, asset):
@@ -147,17 +132,17 @@ def create_linkedin_post(token, owner_urn, text, asset):
             "com.linkedin.ugc.ShareContent": {
                 "shareCommentary": {"text": text},
                 "shareMediaCategory": "IMAGE",
-                "media": [{"status": "READY", "media": asset}]
+                "media": [{"status": "READY","media": asset}]
             }
         },
-        "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
+        "visibility":{"com.linkedin.ugc.MemberNetworkVisibility":"PUBLIC"}
     }
     r = requests.post("https://api.linkedin.com/v2/ugcPosts", headers=headers, json=payload)
     return r.status_code
 
-# -------------------------------
-# UI: GENERATE CONTENT
-# -------------------------------
+# ========================
+# STEP 1 – GENERATE CONTENT
+# ========================
 topic = st.text_input("Enter your LinkedIn topic")
 
 if st.button("Generate"):
@@ -171,28 +156,27 @@ if st.button("Generate"):
             st.session_state.image_path = image_path
             st.session_state.has_content = True
 
-# -------------------------------
-# DISPLAY GENERATED CONTENT
-# -------------------------------
+# Display content & download options
 if st.session_state.has_content:
     st.subheader("📝 Generated Text")
     st.write(st.session_state.generated_text)
+    st.download_button("💾 Download Text", st.session_state.generated_text, file_name="linkedin_post.txt")
+
     st.subheader("🖼️ Generated Image")
     st.image(Image.open(st.session_state.image_path), use_container_width=True)
+    with open(st.session_state.image_path, "rb") as f:
+        st.download_button("💾 Download Image", f, file_name="linkedin_image.png")
 
-# -------------------------------
-# LINKEDIN LOGIN
-# -------------------------------
+# ========================
+# STEP 2 – LINKEDIN LOGIN
+# ========================
 st.divider()
 st.subheader("🔐 LinkedIn Login")
 
-login_url = (
-    f"{AUTH_URL}?response_type=code&client_id={CLIENT_ID}"
-    f"&redirect_uri={REDIRECT_URI}&scope=openid%20profile%20w_member_social"
-)
-st.markdown(f"[Login with LinkedIn]({login_url})")
+login_url = f"{AUTH_URL}?response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&scope=openid%20profile%20w_member_social"
+st.markdown(f"[Login with LinkedIn]({login_url})", unsafe_allow_html=True)
 
-# Handle redirect back from LinkedIn
+# Check if redirected back with code
 query_params = st.experimental_get_query_params()
 if "code" in query_params and not st.session_state.linkedin_logged_in:
     auth_code = query_params["code"][0]
@@ -200,18 +184,13 @@ if "code" in query_params and not st.session_state.linkedin_logged_in:
     if token:
         st.session_state.linkedin_token = token
         st.session_state.linkedin_logged_in = True
-        # Force page to rerun so the Post button becomes active
-        st.experimental_rerun()
+        st.success("✅ LinkedIn login successful! You can now post to LinkedIn.")
 
-# -------------------------------
-# POST TO LINKEDIN
-# -------------------------------
-upload_disabled = not (
-    st.session_state.has_content and
-    st.session_state.linkedin_logged_in
-)
+# ========================
+# STEP 3 – POST TO LINKEDIN
+# ========================
+upload_disabled = not (st.session_state.has_content and st.session_state.linkedin_logged_in)
 
-st.subheader("🚀 Post to LinkedIn")
 if st.button("Post to LinkedIn", disabled=upload_disabled):
     with st.spinner("Posting to LinkedIn..."):
         owner_urn = get_user_urn(st.session_state.linkedin_token)
@@ -227,6 +206,6 @@ if st.button("Post to LinkedIn", disabled=upload_disabled):
             asset
         )
     if status == 201:
-        st.success("🎉 Posted successfully on LinkedIn!")
+        st.success("🎉 Successfully posted on LinkedIn!")
     else:
-        st.error("❌ Failed to post")
+        st.error("❌ Failed to post on LinkedIn")
