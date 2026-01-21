@@ -16,7 +16,7 @@ from text_generator import generate_linkedin_post
 from image_prompt_generator import generate_image_prompt
 from image_generator import generate_image
 
-# ---------------- Secrets ----------------
+# ---------------- LinkedIn Secrets ----------------
 CLIENT_ID = st.secrets["LINKEDIN_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["LINKEDIN_CLIENT_SECRET"]
 REDIRECT_URI = st.secrets["LINKEDIN_REDIRECT_URI"]
@@ -34,13 +34,14 @@ defaults = {
     "linkedin_logged_in": False
 }
 
-for k, v in defaults.items():
-    st.session_state.setdefault(k, v)
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 # ---------------- UI ----------------
 st.title("🤖 AI-Powered LinkedIn Content Generator")
 st.markdown(
-    "Create **professional LinkedIn posts and visuals** and post them **directly to LinkedIn** using OAuth."
+    "Create **professional LinkedIn posts and visuals** and post them **directly to LinkedIn**."
 )
 
 topic = st.text_input(
@@ -72,10 +73,9 @@ if st.button("🚀 Generate Post & Image"):
 
 # ---------------- Display Output ----------------
 if st.session_state.generated:
-
     st.divider()
-    st.subheader("📝 Generated LinkedIn Post")
 
+    st.subheader("📝 Generated LinkedIn Post")
     st.text_area(
         "LinkedIn Script",
         value=st.session_state.linkedin_post,
@@ -98,16 +98,14 @@ if st.session_state.generated:
 
     st.markdown(f"[Login with LinkedIn]({login_url})")
 
-# ---------------- OAuth Callback ----------------
-params = st.query_params
-
+# ---------------- OAuth Helpers ----------------
 def get_access_token(code):
     payload = {
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": REDIRECT_URI,
         "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
+        "client_secret": CLIENT_SECRET
     }
     r = requests.post(TOKEN_URL, data=payload)
     if r.status_code == 200:
@@ -120,7 +118,10 @@ def get_user_urn(token):
     return f"urn:li:person:{r.json()['sub']}"
 
 def upload_image(token, image_path, owner):
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
 
     register_payload = {
         "registerUploadRequest": {
@@ -151,7 +152,10 @@ def upload_image(token, image_path, owner):
     return asset
 
 def create_post(token, owner, text, asset):
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
 
     payload = {
         "author": owner,
@@ -176,6 +180,9 @@ def create_post(token, owner, text, asset):
 
     return r.status_code
 
+# ---------------- OAuth Callback ----------------
+params = st.query_params
+
 if "code" in params and not st.session_state.linkedin_logged_in:
     token = get_access_token(params["code"])
     if token:
@@ -185,7 +192,7 @@ if "code" in params and not st.session_state.linkedin_logged_in:
         st.success("✅ LinkedIn authenticated!")
 
 # ---------------- Post to LinkedIn ----------------
-if st.session_state.linkedin_logged_in and st.session_state.generated:
+if st.session_state.generated and st.session_state.linkedin_logged_in:
     if st.button("🚀 Post Directly to LinkedIn"):
         with st.spinner("Posting to LinkedIn..."):
             owner = get_user_urn(st.session_state.linkedin_token)
