@@ -9,20 +9,12 @@ client = genai.Client(
 )
 
 def generate_image_prompt(linkedin_post: str):
-    prompt = f"""
-You are a creative AI prompt generator.
+template="""
+        Write a professional and engaging LinkedIn post (100–120 words) about:
+        "{topic}"
 
-Based on the following LinkedIn post, generate a visually appealing image prompt that can be used with AI image generation models:
-
-LinkedIn post:
-"{linkedin_post}"
-
-Rules:
-- Keep the description clear and concise
-- Include key elements and context from the post
-- Specify art style, composition, lighting, and color palette
-- Output text should be ready for AI image generation models
-"""
+        Tone: professional, inspiring, positive.
+        """
 
     try:
         response = client.models.generate_content(
