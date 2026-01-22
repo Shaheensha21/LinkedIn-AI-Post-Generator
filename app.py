@@ -22,61 +22,65 @@ st.title("🤖 AI LinkedIn Auto Poster")
 # -------------------------------
 CLIENT_ID = st.secrets["LINKEDIN_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["LINKEDIN_CLIENT_SECRET"]
-REDIRECT_URI = st.secrets["LINKEDIN_REDIRECT_URI"]
+REDIRECT_URI = st.secrets["LINKEDIN_REDIRECT_URI"]  # MUST be oauth success page
 AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
 
 # -------------------------------
 # SESSION STATE INIT
 # -------------------------------
-for key, default in {
+defaults = {
     "linkedin_token": None,
     "linkedin_logged_in": False,
     "generated_text": "",
     "image_path": None,
     "has_content": False,
-}.items():
-    if key not in st.session_state:
-        st.session_state[key] = default
+}
+
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 # -------------------------------
-# STEP 1: SHOW LOGIN STATUS
+# STEP 1: AUTH STATUS
 # -------------------------------
 if st.session_state.linkedin_logged_in:
-    st.success("🔑 LinkedIn authentication successful!")
+    st.success("🔐 Authentication successful! You can now generate & post.")
 else:
     login_url = (
-        f"{AUTH_URL}?response_type=code"
+        f"{AUTH_URL}"
+        f"?response_type=code"
         f"&client_id={CLIENT_ID}"
         f"&redirect_uri={REDIRECT_URI}"
         f"&scope=openid%20profile%20w_member_social"
     )
+
     st.warning("⚠️ You must login to LinkedIn first.")
-    st.markdown(f"[Login with LinkedIn]({login_url})")
+    st.markdown(f"👉 [Login with LinkedIn]({login_url})")
+    st.stop()  # ⛔ STOP here until login is done
 
 # -------------------------------
 # STEP 2: GENERATE POST & IMAGE
 # -------------------------------
-if st.session_state.linkedin_logged_in:
-    st.divider()
-    st.subheader("📝 Step 2: Generate LinkedIn Post & Image")
+st.divider()
+st.subheader("📝 Step 2: Generate LinkedIn Post & Image")
 
-    topic = st.text_input(
-        "Enter LinkedIn post topic",
-        "How AI is helping students build real-world projects"
-    )
+topic = st.text_input(
+    "Enter LinkedIn post topic",
+    "How AI is helping students build real-world projects"
+)
 
-    if st.button("Generate Post & Image"):
-        if topic.strip() == "":
-            st.warning("⚠️ Please enter a topic")
-        else:
-            with st.spinner("Generating content..."):
-                post_text = generate_linkedin_post(topic)
-                image_prompt = generate_flux_image_prompt(post_text)
-                image_path = generate_image(image_prompt)
+if st.button("✨ Generate Post & Image"):
+    if topic.strip() == "":
+        st.warning("⚠️ Please enter a topic")
+    else:
+        with st.spinner("Generating content..."):
+            post_text = generate_linkedin_post(topic)
+            image_prompt = generate_flux_image_prompt(post_text)
+            image_path = generate_image(image_prompt)
 
-                st.session_state.generated_text = post_text
-                st.session_state.image_path = image_path
-                st.session_state.has_content = True
+            st.session_state.generated_text = post_text
+            st.session_state.image_path = image_path
+            st.session_state.has_content = True
 
 # -------------------------------
 # DISPLAY GENERATED CONTENT
@@ -105,7 +109,7 @@ if st.session_state.has_content:
 # -------------------------------
 # STEP 3: POST TO LINKEDIN
 # -------------------------------
-if st.session_state.has_content and st.session_state.linkedin_logged_in:
+if st.session_state.has_content:
     st.divider()
     st.subheader("🚀 Step 3: Post to LinkedIn")
 
@@ -114,6 +118,7 @@ if st.session_state.has_content and st.session_state.linkedin_logged_in:
             "https://api.linkedin.com/v2/me",
             headers={"Authorization": f"Bearer {token}"}
         )
+        r.raise_for_status()
         return f"urn:li:person:{r.json()['id']}"
 
     def upload_image(token, image_path, owner):
@@ -185,9 +190,11 @@ if st.session_state.has_content and st.session_state.linkedin_logged_in:
                     st.session_state.generated_text,
                     asset
                 )
+
                 if res.status_code == 201:
-                    st.success("🎉 Posted successfully on LinkedIn!")
+                    st.success("🎉 Successfully posted on LinkedIn!")
                 else:
-                    st.error(f"❌ Failed to post (status {res.status_code})")
+                    st.error(f"❌ Failed to post ({res.status_code})")
+
             except Exception as e:
-                st.error(f"❌ Failed to post: {e}")
+                st.error(f"❌ Error: {e}")
