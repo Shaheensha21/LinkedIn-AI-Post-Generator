@@ -7,20 +7,18 @@ import time
 import requests
 import streamlit as st
 from PIL import Image
-from dotenv import load_dotenv
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 from huggingface_hub import InferenceClient
 
 # -------------------------------
-# LOAD ENV VARIABLES
+# STREAMLIT SECRETS
 # -------------------------------
-load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-HF_API_KEY = os.getenv("HF_API_KEY")
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+HF_API_KEY = st.secrets["HF_API_KEY"]
+CLIENT_ID = st.secrets["CLIENT_ID"]
+CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
 REDIRECT_URI = "https://linkedinpostgenerator1234.streamlit.app/"
 
 AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
@@ -151,9 +149,7 @@ def create_linkedin_post(token, owner_urn, text, asset):
 # LINKEDIN LOGIN FLOW (FIRST)
 # ===============================
 st.subheader("🔐 LinkedIn Login Required")
-login_url = (
-    f"{AUTH_URL}?response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&scope=openid%20profile%20w_member_social"
-)
+login_url = f"{AUTH_URL}?response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&scope=openid%20profile%20w_member_social"
 st.markdown(f"[Login with LinkedIn]({login_url})")
 
 query_params = st.query_params
