@@ -1,40 +1,25 @@
-from google import genai
-import os
+from langchain_core.messages import HumanMessage
 
-# -------------------------------
-# Configure Gemini Client
-# -------------------------------
-client = genai.Client(
-    api_key=os.getenv("GOOGLE_API_KEY")
-)
-
-def generate_linkedin_post(topic, tone="professional"):
-    prompt = f"""
-You are a top 1% LinkedIn content creator.
-
-Write a {tone} LinkedIn post on the topic:
-"{topic}"
-
-Rules:
-- Strong hook in first 2 lines
-- Short paragraphs
-- Professional emojis (minimal)
-- Clear value
-- End with a call-to-action
-- 3–5 hashtags at the end
-- No markdown
-- Sound human
-
-Return ONLY the post text.
-"""
-
+def generate_text(topic: str) -> str:
     try:
-        response = client.models.generate_content(
-            model="models/gemini-2.5-flash",
-            contents=prompt
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash",   # ✅ stable & supported
+            temperature=0.7,
+            api_key=st.secrets["GEMINI_API_KEY"],
         )
 
-        return response.text.strip()
+        message = HumanMessage(
+            content=f"""
+Write a professional and engaging LinkedIn post (100–120 words) about:
+"{topic}"
+
+Tone: professional, inspiring, positive.
+"""
+        )
+
+        response = llm.invoke([message])   # ✅ MUST be a list
+        return response.content
 
     except Exception as e:
-        return "⚠️ Failed to generate post. Please try again."
+        st.error(f"Gemini error: {e}")
+        return "❌ Failed to generate content. Please try again."
