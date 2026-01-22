@@ -1,0 +1,122 @@
+# ==========================================
+# app.py — LinkedIn OAuth Login (Step 1)
+# ==========================================
+
+import streamlit as st
+import urllib.parse
+
+# -------------------------------
+# STREAMLIT CONFIG
+# -------------------------------
+st.set_page_config(
+    page_title="LinkedIn OAuth Login",
+    page_icon="🔐",
+    layout="centered"
+)
+
+# -------------------------------
+# LINKEDIN OAUTH CONFIG
+# -------------------------------
+CLIENT_ID = st.secrets["LINKEDIN_CLIENT_ID"]
+REDIRECT_URI = st.secrets["LINKEDIN_REDIRECT_URI"]
+
+AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
+
+SCOPES = "openid profile w_member_social"
+
+# -------------------------------
+# STYLING (PROFESSIONAL LOOK)
+# -------------------------------
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background: linear-gradient(135deg, #0A66C2 0%, #004182 100%);
+        color: white;
+    }
+
+    .login-card {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2.5rem;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        text-align: center;
+        max-width: 520px;
+        margin: auto;
+    }
+
+    .login-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+
+    .login-subtitle {
+        font-size: 1.05rem;
+        color: #dbe9ff;
+        margin-bottom: 2rem;
+    }
+
+    .login-btn {
+        display: inline-block;
+        background-color: #ffffff;
+        color: #0A66C2;
+        padding: 14px 26px;
+        border-radius: 30px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .login-btn:hover {
+        background-color: #e6f0ff;
+        transform: translateY(-2px);
+    }
+
+    .footer-text {
+        margin-top: 2rem;
+        font-size: 0.85rem;
+        color: #c7dcff;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# -------------------------------
+# BUILD LOGIN URL
+# -------------------------------
+params = {
+    "response_type": "code",
+    "client_id": CLIENT_ID,
+    "redirect_uri": REDIRECT_URI,
+    "scope": SCOPES
+}
+
+login_url = f"{AUTH_URL}?{urllib.parse.urlencode(params)}"
+
+# -------------------------------
+# UI
+# -------------------------------
+st.markdown(
+    f"""
+    <div class="login-card">
+        <div class="login-title">🔐 LinkedIn Authorization</div>
+        <div class="login-subtitle">
+            Securely connect your LinkedIn account<br>
+            to generate and post AI content
+        </div>
+
+        <a class="login-btn" href="{login_url}">
+            Continue with LinkedIn
+        </a>
+
+        <div class="footer-text">
+            We never store your password.<br>
+            Authentication is handled directly by LinkedIn.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
