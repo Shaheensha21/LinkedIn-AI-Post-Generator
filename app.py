@@ -1,5 +1,5 @@
 # ================================
-# app.py – AI LinkedIn Auto Poster (Streamlit Cloud Ready)
+# app.py – AI LinkedIn Auto Poster (Fixed)
 # ================================
 
 import time
@@ -7,8 +7,9 @@ import requests
 import streamlit as st
 from PIL import Image
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import PromptTemplate
+from langchain.chat_models import ChatGoogleGenerativeAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema import HumanMessage
 from huggingface_hub import InferenceClient
 
 # -------------------------------
@@ -18,7 +19,6 @@ GEMINI_API_KEY = st.secrets["GOOGLE_API_KEY"]
 HF_API_KEY = st.secrets["HUGGINGFACE_API_KEY"]
 CLIENT_ID = st.secrets["LINKEDIN_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["LINKEDIN_CLIENT_SECRET"]
-
 REDIRECT_URI = st.secrets["LINKEDIN_REDIRECT_URI"]
 
 AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
@@ -28,17 +28,14 @@ TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 # STREAMLIT CONFIG & STYLING
 # -------------------------------
 st.set_page_config(page_title="AI LinkedIn Auto Poster", layout="centered")
-
-st.markdown(
-    """
-    <style>
-    .stApp { background: linear-gradient(135deg, #007182 20%, #001699 100%); color: white; }
-    h1, h2, h3 { color: #FFD700 !important; font-weight: 800 !important; }
-    .stButton>button { background-color: #FF5733 !important; color: white !important; border-radius: 8px; font-weight: bold; }
-    .stButton>button:hover { background-color: #FFC300 !important; color: black !important; }
-    </style>
-    """, unsafe_allow_html=True
-)
+st.markdown("""
+<style>
+.stApp { background: linear-gradient(135deg, #007182 20%, #001699 100%); color: white; }
+h1, h2, h3 { color: #FFD700 !important; font-weight: 800 !important; }
+.stButton>button { background-color: #FF5733 !important; color: white !important; border-radius: 8px; font-weight: bold; }
+.stButton>button:hover { background-color: #FFC300 !important; color: black !important; }
+</style>
+""", unsafe_allow_html=True)
 
 st.title("🤖 AI LinkedIn Auto Poster")
 st.caption("Generate AI content and post directly to LinkedIn")
@@ -46,47 +43,37 @@ st.caption("Generate AI content and post directly to LinkedIn")
 # -------------------------------
 # SESSION STATE INIT
 # -------------------------------
-if "has_content" not in st.session_state:
-    st.session_state.has_content = False
-if "linkedin_logged_in" not in st.session_state:
-    st.session_state.linkedin_logged_in = False
-if "linkedin_token" not in st.session_state:
-    st.session_state.linkedin_token = None
-if "generated_text" not in st.session_state:
-    st.session_state.generated_text = ""
-if "image_path" not in st.session_state:
-    st.session_state.image_path = ""
+for key in ["has_content", "linkedin_logged_in", "linkedin_token", "generated_text", "image_path"]:
+    if key not in st.session_state:
+        st.session_state[key] = False if "logged_in" in key or "has_content" in key else ""
 
 # ================================
-# TEXT GENERATION (GEMINI)
+# TEXT GENERATION (GEMINI FIXED)
 # ================================
 def generate_text(topic: str) -> str:
     llm = ChatGoogleGenerativeAI(
-        model="models/gemini-2.5-flash",
-        api_key=GEMINI_API_KEY,
-        temperature=0.7
+        model="chat-bison-001",  # stable LLM for production
+        temperature=0.7,
+        max_output_tokens=512,
+        api_key=GEMINI_API_KEY
     )
-    prompt = PromptTemplate(
-        input_variables=["topic"],
-        template="""
-        Write a professional and engaging LinkedIn post (100–120 words) about:
-        "{topic}"
 
-        Tone: professional, inspiring, positive.
-        """
+    prompt = ChatPromptTemplate.from_template(
+        """Write a professional and engaging LinkedIn post (100–120 words) about:
+"{topic}"
+
+Tone: professional, inspiring, positive."""
     )
-    formatted_prompt = prompt.format(topic=topic)
-    response = llm.invoke(formatted_prompt)
+    # Convert to messages
+    messages = prompt.format_prompt(topic=topic).to_messages()
+    response = llm.invoke(messages)
     return response.content
 
 # ================================
 # IMAGE GENERATION (HF FLUX)
 # ================================
 def generate_image(prompt, output_path="linkedin_image.webp"):
-    client = InferenceClient(
-        model="black-forest-labs/FLUX.1-schnell",
-        token=HF_API_KEY
-    )
+    client = InferenceClient(model="black-forest-labs/FLUX.1-schnell", token=HF_API_KEY)
     for attempt in range(3):
         try:
             image = client.text_to_image(prompt)
@@ -109,15 +96,12 @@ def get_access_token(auth_code):
         "client_secret": CLIENT_SECRET,
     }
     r = requests.post(TOKEN_URL, data=payload, timeout=10)
-    if r.status_code == 200:
-        return r.json()["access_token"]
-    return None
+    return r.json().get("access_token")
 
 def get_user_urn(token):
     headers = {"Authorization": f"Bearer {token}"}
     r = requests.get("https://api.linkedin.com/v2/me", headers=headers, timeout=10)
-    data = r.json()
-    return f"urn:li:person:{data['id']}"
+    return f"urn:li:person:{r.json()['id']}"
 
 def upload_image_to_linkedin(token, image_path, owner_urn):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -152,10 +136,7 @@ def create_linkedin_post(token, owner_urn, text, asset):
 # ================================
 st.divider()
 st.subheader("🔐 LinkedIn Authorization")
-
-login_url = (
-    f"{AUTH_URL}?response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&scope=openid%20profile%20w_member_social"
-)
+login_url = f"{AUTH_URL}?response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&scope=openid%20profile%20w_member_social"
 st.markdown(f"[Login with LinkedIn]({login_url})")
 
 query_params = st.query_params
@@ -173,10 +154,8 @@ topic = st.text_input("Enter LinkedIn post topic")
 if st.button("Generate"):
     if topic.strip():
         with st.spinner("Generating content..."):
-            text = generate_text(topic)
-            image_path = generate_image(f"Professional illustration representing {topic}")
-            st.session_state.generated_text = text
-            st.session_state.image_path = image_path
+            st.session_state.generated_text = generate_text(topic)
+            st.session_state.image_path = generate_image(f"Professional illustration representing {topic}")
             st.session_state.has_content = True
     else:
         st.warning("Please enter a topic")
