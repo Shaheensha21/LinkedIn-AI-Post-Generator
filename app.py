@@ -2,7 +2,6 @@
 # app.py – AI LinkedIn Auto Poster (Login First Flow)
 # ================================
 
-import os
 import time
 import requests
 import streamlit as st
@@ -13,13 +12,14 @@ from langchain_core.prompts import PromptTemplate
 from huggingface_hub import InferenceClient
 
 # -------------------------------
-# STREAMLIT SECRETS
+# SECRETS (replace st.secrets for now)
 # -------------------------------
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 HF_API_KEY = st.secrets["HF_API_KEY"]
 CLIENT_ID = st.secrets["CLIENT_ID"]
 CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
-REDIRECT_URI = "https://linkedinpostgenerator1234.streamlit.app/"
+REDIRECT_URI = st.secrets["REDIRECT_URI"]
+
 
 AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
 TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
