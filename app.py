@@ -20,7 +20,7 @@ st.set_page_config(
 )
 
 st.title("🤖 AI LinkedIn Auto Poster")
-st.caption("Generate content → Login → Post to LinkedIn")
+st.caption("Login → Generate → Download → Post")
 
 # -------------------------------
 # SECRETS
@@ -45,31 +45,72 @@ for key, default in {
     if key not in st.session_state:
         st.session_state[key] = default
 
-# -------------------------------
-# STEP 1: GENERATE CONTENT
-# -------------------------------
-st.subheader("📝 Step 1: Generate Content")
+# ==================================================
+# STEP 1: LINKEDIN LOGIN (FIRST)
+# ==================================================
+st.subheader("🔐 Step 1: Login with LinkedIn")
 
-topic = st.text_input(
-    "Enter LinkedIn post topic",
-    "How AI is helping students build real-world projects"
+login_url = (
+    f"{AUTH_URL}"
+    f"?response_type=code"
+    f"&client_id={CLIENT_ID}"
+    f"&redirect_uri={REDIRECT_URI}"
+    f"&scope=openid%20profile%20w_member_social"
 )
 
-if st.button("Generate Post & Image"):
-    with st.spinner("Generating content..."):
-        post_text = generate_linkedin_post(topic)
+if not st.session_state.linkedin_logged_in:
+    st.markdown(f"👉 [Login with LinkedIn]({login_url})")
+else:
+    st.success("✅ LinkedIn connected")
 
-        image_prompt = generate_flux_image_prompt(post_text)
+# Handle OAuth redirect
+query_params = st.query_params
+if "code" in query_params and not st.session_state.linkedin_logged_in:
+    auth_code = query_params["code"]
 
-        image_path = generate_image(image_prompt)
+    token_res = requests.post(
+        TOKEN_URL,
+        data={
+            "grant_type": "authorization_code",
+            "code": auth_code,
+            "redirect_uri": REDIRECT_URI,
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+        }
+    )
 
-        st.session_state.generated_text = post_text
-        st.session_state.image_path = image_path
-        st.session_state.has_content = True
+    if token_res.status_code == 200:
+        st.session_state.linkedin_token = token_res.json()["access_token"]
+        st.session_state.linkedin_logged_in = True
+        st.success("✅ LinkedIn login successful!")
 
-# -------------------------------
-# DISPLAY GENERATED CONTENT
-# -------------------------------
+# ==================================================
+# STEP 2: GENERATE CONTENT (AFTER LOGIN)
+# ==================================================
+st.divider()
+st.subheader("📝 Step 2: Generate Content")
+
+if not st.session_state.linkedin_logged_in:
+    st.info("ℹ️ Please login with LinkedIn to generate content.")
+else:
+    topic = st.text_input(
+        "Enter LinkedIn post topic",
+        "How AI is helping students build real-world projects"
+    )
+
+    if st.button("Generate Post & Image"):
+        with st.spinner("Generating content..."):
+            post_text = generate_linkedin_post(topic)
+            image_prompt = generate_flux_image_prompt(post_text)
+            image_path = generate_image(image_prompt)
+
+            st.session_state.generated_text = post_text
+            st.session_state.image_path = image_path
+            st.session_state.has_content = True
+
+# ==================================================
+# STEP 3: DOWNLOAD CONTENT
+# ==================================================
 if st.session_state.has_content:
     st.markdown("### ✍️ Generated LinkedIn Post")
     st.write(st.session_state.generated_text)
@@ -91,46 +132,9 @@ if st.session_state.has_content:
             file_name="linkedin_post_image.webp"
         )
 
-# -------------------------------
-# STEP 2: LINKEDIN LOGIN
-# -------------------------------
-st.divider()
-st.subheader("🔐 Step 2: Login with LinkedIn")
-
-login_url = (
-    f"{AUTH_URL}"
-    f"?response_type=code"
-    f"&client_id={CLIENT_ID}"
-    f"&redirect_uri={REDIRECT_URI}"
-    f"&scope=openid%20profile%20w_member_social"
-)
-
-st.markdown(f"👉 [Login with LinkedIn]({login_url})")
-
-query_params = st.query_params
-
-if "code" in query_params and not st.session_state.linkedin_logged_in:
-    auth_code = query_params["code"]
-
-    token_res = requests.post(
-        TOKEN_URL,
-        data={
-            "grant_type": "authorization_code",
-            "code": auth_code,
-            "redirect_uri": REDIRECT_URI,
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-        }
-    )
-
-    if token_res.status_code == 200:
-        st.session_state.linkedin_token = token_res.json()["access_token"]
-        st.session_state.linkedin_logged_in = True
-        st.success("✅ LinkedIn login successful!")
-
-# -------------------------------
-# STEP 3: POST TO LINKEDIN
-# -------------------------------
+# ==================================================
+# STEP 4: POST TO LINKEDIN
+# ==================================================
 st.divider()
 st.subheader("🚀 Step 3: Post to LinkedIn")
 
@@ -197,8 +201,8 @@ def post_to_linkedin(token, owner, text, asset):
     )
 
 post_disabled = not (
-    st.session_state.has_content and
-    st.session_state.linkedin_logged_in
+    st.session_state.linkedin_logged_in and
+    st.session_state.has_content
 )
 
 if st.button("📤 Post on LinkedIn", disabled=post_disabled):
