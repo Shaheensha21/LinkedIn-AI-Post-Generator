@@ -31,15 +31,80 @@ st.set_page_config(page_title="AI LinkedIn Auto Poster", layout="centered")
 
 st.markdown("""
 <style>
-.stApp { background: linear-gradient(135deg, #007182 20%, #001699 100%); color: white; }
-h1, h2, h3, h4, h5, h6 { font-size: 2.2em !important; font-weight: 800 !important; color: #FFD700 !important; }
-.stButton>button { background-color: #FF5733 !important; color: white !important; border-radius: 8px !important; font-size: 1.1em !important; font-weight: bold !important; }
-.stButton>button:hover { background-color: #FFC300 !important; color: black !important; }
+
+/* ---------- App Background ---------- */
+.stApp {
+    background: linear-gradient(135deg, #f3f6fb 0%, #e9eef6 100%);
+    font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+/* ---------- Main Title ---------- */
+h1 {
+    color: #0A66C2 !important;  /* LinkedIn blue */
+    font-weight: 700 !important;
+    letter-spacing: -0.5px;
+}
+
+/* ---------- Section Headers ---------- */
+h2, h3 {
+    color: #1f2937 !important;
+    font-weight: 600 !important;
+}
+
+/* ---------- Content Cards ---------- */
+div[data-testid="stVerticalBlock"] > div:has(h2),
+div[data-testid="stVerticalBlock"] > div:has(h3) {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    margin-bottom: 1.5rem;
+}
+
+/* ---------- Text Area & Inputs ---------- */
+textarea, input {
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+    font-size: 15px !important;
+}
+
+/* ---------- Generated Text ---------- */
+.stMarkdown p {
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: #374151;
+}
+
+/* ---------- Buttons ---------- */
+.stButton > button {
+    background-color: #0A66C2 !important;
+    color: white !important;
+    border-radius: 10px !important;
+    padding: 0.6rem 1.2rem;
+    font-weight: 600;
+    border: none;
+}
+
+.stButton > button:hover {
+    background-color: #004182 !important;
+}
+
+/* ---------- LinkedIn Login Link ---------- */
+a[href*="linkedin.com"] {
+    font-weight: 600;
+    color: #0A66C2 !important;
+}
+
+/* ---------- Divider ---------- */
+hr {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 2rem 0;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🤖 AI LinkedIn Auto Poster")
-st.caption("Login first, then generate AI content and post directly to LinkedIn")
 
 # -------------------------------
 # SESSION STATE INIT
