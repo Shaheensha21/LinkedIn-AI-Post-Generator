@@ -7,7 +7,7 @@ import requests
 from PIL import Image
 
 from text_generator import generate_linkedin_post
-from image_prompt_generator import generate_image_prompt
+from image_prompt_generator import generate_flux_image_prompt
 from image_generator import generate_image
 
 # -------------------------------
@@ -35,17 +35,15 @@ TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 # -------------------------------
 # SESSION STATE
 # -------------------------------
-defaults = {
+for key, default in {
     "generated_text": "",
     "image_path": None,
     "has_content": False,
     "linkedin_token": None,
     "linkedin_logged_in": False,
-}
-
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
 
 # -------------------------------
 # STEP 1: GENERATE CONTENT
@@ -58,17 +56,19 @@ topic = st.text_input(
 )
 
 if st.button("Generate Post & Image"):
-    with st.spinner("Generating..."):
+    with st.spinner("Generating content..."):
         post_text = generate_linkedin_post(topic)
-        image_prompt = generate_image_prompt(post_text)
+
+        image_prompt = generate_flux_image_prompt(post_text)
+
         image_path = generate_image(image_prompt)
 
-    st.session_state.generated_text = post_text
-    st.session_state.image_path = image_path
-    st.session_state.has_content = True
+        st.session_state.generated_text = post_text
+        st.session_state.image_path = image_path
+        st.session_state.has_content = True
 
 # -------------------------------
-# DISPLAY CONTENT
+# DISPLAY GENERATED CONTENT
 # -------------------------------
 if st.session_state.has_content:
     st.markdown("### ✍️ Generated LinkedIn Post")
@@ -107,13 +107,12 @@ login_url = (
 
 st.markdown(f"👉 [Login with LinkedIn]({login_url})")
 
-# Handle redirect BACK to same page
 query_params = st.query_params
 
 if "code" in query_params and not st.session_state.linkedin_logged_in:
     auth_code = query_params["code"]
 
-    token_response = requests.post(
+    token_res = requests.post(
         TOKEN_URL,
         data={
             "grant_type": "authorization_code",
@@ -121,11 +120,11 @@ if "code" in query_params and not st.session_state.linkedin_logged_in:
             "redirect_uri": REDIRECT_URI,
             "client_id": CLIENT_ID,
             "client_secret": CLIENT_SECRET,
-        },
+        }
     )
 
-    if token_response.status_code == 200:
-        st.session_state.linkedin_token = token_response.json()["access_token"]
+    if token_res.status_code == 200:
+        st.session_state.linkedin_token = token_res.json()["access_token"]
         st.session_state.linkedin_logged_in = True
         st.success("✅ LinkedIn login successful!")
 
@@ -144,7 +143,8 @@ def get_user_urn(token):
 
 def upload_image(token, image_path, owner):
     headers = {"Authorization": f"Bearer {token}"}
-    register = requests.post(
+
+    reg = requests.post(
         "https://api.linkedin.com/v2/assets?action=registerUpload",
         headers=headers,
         json={
@@ -159,11 +159,11 @@ def upload_image(token, image_path, owner):
         }
     ).json()
 
-    upload_url = register["value"]["uploadMechanism"][
+    upload_url = reg["value"]["uploadMechanism"][
         "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
     ]["uploadUrl"]
 
-    asset = register["value"]["asset"]
+    asset = reg["value"]["asset"]
 
     with open(image_path, "rb") as f:
         requests.put(upload_url, data=f)
@@ -202,7 +202,7 @@ post_disabled = not (
 )
 
 if st.button("📤 Post on LinkedIn", disabled=post_disabled):
-    with st.spinner("Posting..."):
+    with st.spinner("Posting to LinkedIn..."):
         owner = get_user_urn(st.session_state.linkedin_token)
         asset = upload_image(
             st.session_state.linkedin_token,
