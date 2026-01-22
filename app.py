@@ -67,7 +67,6 @@ if "code" in query_params and not st.session_state.linkedin_logged_in:
         st.success("✅ Login successful!")
     else:
         st.error("❌ LinkedIn authentication failed")
-        st.json(token_res.json())  # show actual LinkedIn error for debugging
 
 # --------------------------------------------------
 # STEP 2: LOGIN UI
@@ -117,25 +116,12 @@ if st.session_state.image_path:
 # STEP 4: POST TO LINKEDIN
 # --------------------------------------------------
 def get_user_urn(token):
-    """
-    Get LinkedIn user URN safely.
-    """
     r = requests.get(
         "https://api.linkedin.com/v2/me",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "X-Restli-Protocol-Version": "2.0.0"
-        },
+        headers={"Authorization": f"Bearer {token}"},
         timeout=10,
     )
-    data = r.json()
-
-    if "id" not in data:
-        st.error("❌ Failed to get LinkedIn profile.")
-        st.json(data)  # show LinkedIn error message
-        st.stop()
-
-    return f"urn:li:person:{data['id']}"
+    return f"urn:li:person:{r.json()['id']}"
 
 def upload_image(token, image_path, owner):
     headers = {"Authorization": f"Bearer {token}"}
@@ -191,9 +177,6 @@ def post_to_linkedin(token, owner, text, asset):
         timeout=10,
     )
 
-# --------------------------------------------------
-# BUTTON TO POST
-# --------------------------------------------------
 if st.session_state.post_text and st.session_state.image_path:
     if st.button("🚀 Post on LinkedIn"):
         with st.spinner("Posting to LinkedIn..."):
@@ -213,5 +196,4 @@ if st.session_state.post_text and st.session_state.image_path:
             if res.status_code == 201:
                 st.success("🎉 Posted successfully on LinkedIn!")
             else:
-                st.error(f"❌ Failed to post on LinkedIn (status {res.status_code})")
-                st.json(res.json())  # show error details
+                st.error("❌ Failed to post on LinkedIn")
