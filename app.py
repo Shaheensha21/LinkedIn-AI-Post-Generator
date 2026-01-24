@@ -101,7 +101,11 @@ hr {
     border-top: 1px solid #e5e7eb;
     margin: 2rem 0;
 }
-
+/* ---------- Spinner Text Color ---------- */
+div[data-testid="stSpinner"] {
+    color: #0A66C2 !important;
+    font-weight: 600;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -158,19 +162,44 @@ Tone: professional, inspiring, positive.
     return response.content
 
 # -------------------------------
-# IMAGE GENERATION (HF)
+# IMAGE GENERATION (Cloudflare FLUX)
 # -------------------------------
-def generate_image(prompt, output_path="generated_image.png"):
-    client = InferenceClient(model="black-forest-labs/FLUX.1-schnell", token=HF_API_KEY)
-    for attempt in range(3):
-        try:
-            image = client.text_to_image(prompt)
-            image.save(output_path)
-            return output_path
-        except Exception as e:
-            print(f"Image retry {attempt+1}: {e}")
-            time.sleep(5)
-    raise RuntimeError("Image generation failed")
+import base64
+import uuid
+import os
+
+CLOUDFLARE_API_TOKEN = st.secrets["CLOUDFLARE_API_TOKEN"]
+CLOUDFLARE_ACCOUNT_ID = st.secrets["CLOUDFLARE_ACCOUNT_ID"]
+
+def generate_image(prompt):
+    url = f"https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/black-forest-labs/flux-1-schnell"
+
+    headers = {
+        "Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {"prompt": prompt}
+
+    response = requests.post(url, headers=headers, json=payload)
+
+    if response.status_code != 200:
+        raise RuntimeError(response.text)
+
+    data = response.json()
+
+    if "result" not in data or "image" not in data["result"]:
+        raise RuntimeError("No image returned from Cloudflare")
+
+    image_bytes = base64.b64decode(data["result"]["image"])
+
+    os.makedirs("generated_images", exist_ok=True)
+    image_path = f"generated_images/{uuid.uuid4().hex}.png"
+
+    with open(image_path, "wb") as f:
+        f.write(image_bytes)
+
+    return image_path
 
 # -------------------------------
 # AI PIPELINE
